@@ -211,3 +211,47 @@ end
 ; -------------------------------------------------------------------------------------------
 ;
 ; -------------------------------------------------------------------------------------------
+
+pro ROI,data,x
+
+  img = reform(data(x,*,*))
+  img2 = reform(data(x,*,*))
+
+; -------------------------------------------------------------------------------------------
+;  img_m = img & for y=0, 658 do img_m(*,y) = mean(img(*,y), /double)
+;  img_s = img & for y=0, 658 do img_s(*,y) = stddev(img(*,y), /double)
+;  img_ = img & for t=0, 398 do img_(t,*) = [img(t,*) - img_m(t,*)]/img_s(t,*)
+;  
+;  return, img_
+;  
+;  m_img = median(img,3)
+;  tvscl, m_img
+
+  img_roi = img[0:2,0:49]
+  img_roi2 = img[0:2,0:49];1:50]
+;  img_roi2 = img2[0:1,1:10]
+  
+  sz = size(img_roi, /dim)
+  nx = sz[0] 
+  ny = sz[1]
+  
+  L = 2
+  img_roi = congrid(img_roi, nx*L, ny*L)
+  img_roi2 = congrid(img_roi2, nx*L, ny*L)
+  
+  sz = size(img_roi, /dim)
+  nx = sz[0]
+  ny = sz[1]
+
+  window, 0, xsize=nx, ysize=ny 
+  tvscl, img_roi
+  
+  window, 1, xsize=nx, ysize=ny 
+  tvscl, img_roi2
+
+  cc = CORREL_IMAGES( img_roi, img_roi2, /monitor, /numpix)
+  
+  print, cc
+  stop
+
+end
