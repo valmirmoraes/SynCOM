@@ -84,3 +84,130 @@ function back_removal, data, x
 end
 
 ; -------------------------------------------------------------------------------------------
+;
+; -------------------------------------------------------------------------------------------
+
+pro corr, data, lag_peak=lag_peak, v=v, x=x
+  
+  if not keyword_Set(data) then begin
+    name = "/Users/valmirmoraesfilho/Downloads/PUNCH project/L7/*.fts"
+
+    data = open_file(name)
+    
+  endif
+
+
+  sz = size(data, /dim)
+  nx = sz[0]
+  nt = sz[1]
+  ny = sz[2]
+  
+  max_delay = 150.0 & lag = findgen(2L*max_delay+1)-1L*max_delay
+  
+; -------------------------------------------------------------------------------------------
+; cross correlates using first frame in relation to others, at x degree angle
+; 
+; finds max for specific cross correlation and locates its lag peak
+; 
+; from lag calculates velocity 
+; -------------------------------------------------------------------------------------------
+;  
+;  cc_peak = fltarr(nt)
+;  lag_peak = fltarr(nt)
+;  
+;  v = fltarr(nt)
+;  dXdT = (0.014*696000)/((findgen(nt)+1)*5*60.0)
+;  
+;  for t=x, nt-1 do begin
+;    
+;    ;bdata = back_removal(data, 5)
+;    bdata = back_removal(data, x)
+;    
+;    cc = c_correlate(bdata[0,50:*], bdata[t,50:*], lag)
+;;    cc = c_correlate(bdata[x,50:*], bdata[t,50:*], lag)
+;
+;    mx = max(abs(cc), ind)
+;    cc_peak[t] = cc[ind]
+;    lag_peak[t] = lag[ind]
+;
+;  endfor 
+;  
+;  v = lag_peak*dXdT
+;  
+; -------------------------------------------------------------------------------------------
+;
+; -------------------------------------------------------------------------------------------
+; cross correlates using the 5th recursive frames, for x degree angle
+;
+; finds max for specific cross correlation and locates its lag peak
+;
+; from lag calculates velocity
+; -------------------------------------------------------------------------------------------
+;
+; size of LAG/Velocity array comes from 395/5 = 79
+; 
+; Calculating velocity:
+; distance: was taken from FITS header
+; time: skipping 5 frames, 5 min for each frame.
+  
+  cc_peak = fltarr(79)
+  lag_peak = fltarr(79)
+  
+  v = fltarr(79)
+  dXdT = (0.014*696000)/(5*5*60.0)
+  
+  for t=0, 395-1,5 do begin
+  
+    bdata = back_removal(data, x)
+  
+    cc = c_correlate(bdata[t,50:*], bdata[t+5,50:*], lag)
+    mx = max(abs(cc), ind)
+    
+    u=t/5
+    cc_peak[u] = cc[ind]
+    lag_peak[u] = lag[ind]
+  
+  endfor
+  
+  v = lag_peak*dXdT
+
+; -------------------------------------------------------------------------------------------
+;
+; -------------------------------------------------------------------------------------------
+; cross correlates using recursive frames, for all angles
+;
+; finds max for specific cross correlation and locates its lag peak
+;
+; from lag calculates velocity
+; -------------------------------------------------------------------------------------------
+;
+;  cc_peak = fltarr(nx, nt)
+;  lag_peak = fltarr(nx, nt)
+;
+;  for x=0, nx-1 do begin
+;    
+;    if x mod 5 eq 0 then print, x
+;    
+;    for t=0, nt-1 do begin
+;      
+;      bdata = back_removal(data, x)
+;      cc = c_correlate(bdata[t-1,50:*],bdata[t,50:*], lag)
+;
+;      mx = max(abs(cc), ind)
+;      cc_peak[x, t] = cc[ind]
+;      lag_peak[x, t] = lag[ind]
+;
+;    endfor
+;  endfor
+;
+; -------------------------------------------------------------------------------------------
+;
+;  dXdT = (0.014*696000)/((findgen(nt)+1)*5*60.0)
+;  v = fltarr(nx,nt)
+;  for i=0, nx-1 do v(x,*) = lag_peak(x,*)*dxdt
+
+end
+
+; -------------------------------------------------------------------------------------------
+;
+; -------------------------------------------------------------------------------------------
