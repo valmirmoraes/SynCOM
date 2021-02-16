@@ -37,3 +37,50 @@ function open_file, name
   return, data
 
 end
+
+; -------------------------------------------------------------------------------------------
+; 
+; -------------------------------------------------------------------------------------------
+
+function back_removal, data, x
+ 
+; ------------------------------------------------------------------------------------------- 
+;  nw = 20 & n0 = 0 & n1 = n0 + nw - 1
+;  sz = size(reform(data[x, n0:n1, *]), /dimension)
+;  nt = sz[0]
+;  ny = sz[1]
+;  
+;  data0 = reform(data[x,n0:n1,*])
+;  
+;  bg0 = dblarr(ny)
+;  bdata = dblarr(nt,ny)
+;  for y=0, ny-1 do bg0[y] = min(data0[*,y])
+;  for t=0, nt-1 do bdata[t,*] = data0[t,*] - smooth(bg0,10)
+;  
+;  bdata[*,0] = max(bdata) & bdata[*,1] = min(bdata)
+;  
+;  return, bdata
+;
+; -------------------------------------------------------------------------------------------
+
+  sz = size(reform(data[x, *, *]), /dimension)
+;  sz = size(reform(data[x, 0:24, *]), /dimension)
+  nt = sz[0]
+  ny = sz[1]
+  
+  data0 = reform(data[x,*,*])
+;  data0 = reform(data[x, 0:24, *]
+;  data0 = median(reform(data[x,*,*]), 3)
+  
+  bg0 = dblarr(ny)
+  bdata = dblarr(nt,ny)
+  for y=0, ny-1 do bg0[y] = min(data0[*,y])
+  for t=0, nt-1 do bdata[t,*] = data0[t,*] - smooth(bg0,10)
+  
+  bdata[*,0] = max(bdata) & bdata[*,1] = min(bdata)
+  
+  return, bdata
+  
+end
+
+; -------------------------------------------------------------------------------------------
