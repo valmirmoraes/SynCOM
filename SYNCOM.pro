@@ -84,6 +84,8 @@ function parker_acc
 end
 
 ; Function produces a structure containing parameters used to create blobs
+; npixel=[3600,659] & nt=850 & n_blobs=2000 & acc=0 
+; param1=param_struc(npixel=npixel, nt=nt, n_blobs=n_blobs, acc=acc)
 function param_struc, npixel=npixel, nt=nt, n_blobs=n_blobs, acc=acc, x_unit=x_unit, t_unit=t_unit
   t0=systime(/s)
   
@@ -100,26 +102,28 @@ function param_struc, npixel=npixel, nt=nt, n_blobs=n_blobs, acc=acc, x_unit=x_u
   frequency = reform(output[1,*])
   if nx ne 360.0 then frequency = congrid(frequency,nx)
   T_time = nt/( ( 1.0/frequency )/ t_unit )
-  
+  ;  print, "Parameter structure: period ok" 
+
   ; restores file containing mean radial velocity for each position angle
   restore, "/Users/vpereir1/Desktop/SynCOM_project/velocity.sav"
   if nx ne 360.0 then velocity = congrid(velocity,nx)
   for i=0, nx-1 do if velocity[i] eq 0.0 then velocity[i] = velocity[i-1]*0.5 + velocity[i+1]*0.5
   vr = smooth(velocity, 10) * t_unit/x_unit
-  
+  ;  print, "Parameter structure: velocity ok"
+
   ; calculates Parker acceleration according to numerical simulation (in meters per second squared, m/s^2)
   if keyword_set(acc) then acc = parker_acc() else acc = 0.0 ;
-  
+  ;  print, "Parameter structure: acc ok"
+
   ; creates array of positions for each blob
   x0_arr = randomu(seed, n_blobs)*nx
   y0_arr = ny + ny/5*(randomu(seed, n_blobs) - 0.5)
   
-  v_array = dblarr(nx,nt)
-  for x=0, nx-1 do v_array[x,*] = vr[x]*findgen(nt) + acc*0.5*findgen(nt)^2.0
-  
-  ; empty arrays
-  a_arr = fltarr(nx, 2.0*ny, nt) ; temporary array for each blob
-  n_arr = fltarr(n_blobs,5)      ; array where initial values will be stored
+  ;;  x_arr = dblarr(n_blobs,nt)
+  ;  y_arr = dblarr(n_blobs,nt)
+  ;  
+  ;  for i=0, n_blobs-1 do y_arr[i,*]=vr[x0_arr[i]]*t + acc*t^2/2.0]
+  ;;    x_arr[i,*]=vr[x0_arr[i]]*t + acc*t^2/2.0]
   
   print, "Parameter structure: Done", systime(/s)-t0
 
@@ -128,64 +132,63 @@ function param_struc, npixel=npixel, nt=nt, n_blobs=n_blobs, acc=acc, x_unit=x_u
 end 
 
 ; Function produces an array containing propagating blobs: each blob takes about 8.5 seconds to produce
+; model_date=model_engine(npixel=npixel, nt=nt, param=param1, n_blobs=n_blobs, n_arr=n_arr)
+; save, model1_date, filename="model_date.sav" 
 function model_engine, param=param, n_arr=n_arr;, n_blobs=n_blobs, npixel=npixel, nt=nt 
   t0 = systime(/s)
-  
-  ; ----------------------------------- Image Dimensions ----------------------------------
-  
-  nx      = param.npixel[0]
-  ny      = param.npixel[1]     & ny_double = 2.0*ny 
-  nt      = param.nt
-  n_blobs = param.n_blobs
-  a_arr   = param.a_arr         & a = a_arr
-  n_arr   = param.n_arr
-  
+
+  nx = npixel[0] & ny = npixel[1] ; image dimensions
   ; -------------------------------- Define Model Settings --------------------------------
 
   ; initial parameters
   x0_arr = param.x0_arr         ; position angle array
   y0_arr = param.y0_arr         ; radial position array
   vr     = param.vr             ; radial velocity array (obtained from data)
-  v_array= param.v_array
   T_time = param.T_time         ; time period array (obtained from data)
   acc    = param.acc            ; Parker mean acceleration (obtained from numerical simulation)
   x_unit = param.x_unit         ; time cadance according to instrument in seconds
   t_unit = param.t_unit         ; pixel size in km
- 
-;  ; empty arrays 
-;  a_arr = fltarr(nx, 2.0*ny, nt) ; temporary array for each blob
-;  a = a_arr
-;  n_arr = fltarr(n_blobs,5)      ; array where initial values will be stored
+  
+;  if acc eq 0.0 then m = 1 else m = 0.1
+  
+  ; empty arrays 
+  a_arr = fltarr(nx, 2*ny, nt+300)  ; temporary array for each blob
+  a = a_arr                     ; array where each blob will be added
+  n_arr = fltarr(n_blobs,5)     ; array where initial values will be stored
 
   ; ------------------------------ Building Model Simulation ------------------------------
   ; loop through blob:
   for i=0, n_blobs-1 do begin
+    ;    if i mod 10 eq 0 then 
     print, "blob time: ", i, systime(/s)-t0;+strtrim(string(i, format="(F6.2)"),2)+, +strtrim(string(systime(/s)-t0, format="(F10.2)"),2)
     
     ; size of radial "perturbation" (in pixel units):
-    L = T_time[x0_arr[i]] * vr[x0_arr[i]] ;* (t_unit/x_unit)
+    L = T_time[x0_arr[i]] * vr[x0_arr[i]] ;* (t_unit/x_unit) 
 
     ; saving initial parameters for each blob:
     n_arr[i,0] = x0_arr[i]
     n_arr[i,1] = y0_arr[i]
     n_arr[i,2] = vr[x0_arr[i]]
     n_arr[i,3] = T_time[x0_arr[i]]
-    n_arr[i,4] = L & L_half = L*0.5 & L_minus = -L
+    n_arr[i,4] = L 
     
     ; loop in time step for each blob:
-    for s=0, nt-1 do begin
-      a_arr[*,*,s] = gaussian_wave( npixel=[nx, ny_double], avr=[x0_arr[i], y0_arr[i]], st_dev = [L_half, L]  ) ; makes blob
+    for s=0, nt+300-1 do begin
+      a_arr[*,*,s] = gaussian_wave( npixel=[nx, 2.0*ny], avr=[x0_arr[i], y0_arr[i]], st_dev = [L*0.5,L]  ) ; makes blob
 
-;      a_arr[*,*,s] = temporary(a_arr[*,*,s]) + shift(reform(a_arr[*,*,s]), [0, L_minus]) ; adds new blob after each space "perturbation"
-      a_arr[*,*,s] = a_arr[*,*,s] + shift(reform(a_arr[*,*,s]), [0, 2*L]) ; adds new blob after each space "perturbation"
+;      a_arr[*,*,s] = a_arr[*,*,s] + shift(reform(a_arr[*,*,s]), [0,-L]) ; adds new blob after each space "perturbation"
+      a_arr[*,*,s] = temporary(a_arr[*,*,s]) + shift(reform(a_arr[*,*,s]), [0,-L]) ; adds new blob after each space "perturbation"
 
+;      t =0.1*s ; time taken for blob to move
       t =1.0*s ; time taken for blob to move
-      a_arr[*,*,s] = shift(reform(a_arr[*,*,s]), [ 0, v_array[x0_arr[i], s] ] ) ; adding simple accelaration to each blob
+      a_arr[*,*,s] = shift(reform(a_arr[*,*,s]), [0,vr[x0_arr[i]]*t + acc*t^2/2.0]) ; adding simple accelaration to each blob
 
+      ;      print, "run time blob", systime(/s)-t0
     endfor
-    
+    ;    a = a + a_arr
     a = temporary(a) + a_arr
 
+    ;    print, "run time time", systime(/s)-t0
   endfor
       
   print, "run time", systime(/s)-t0
@@ -195,11 +198,16 @@ end
 ; Function responsible to incrementing noise and brigthness behavior to an array
 function add_feature, array, max_intensity=max_intensity, noise_level=noise_level
   t0 = systime(/s)
+;  if n_elements(max_intensity) eq 0.0 then max_intensity = 1E-10
+;  if n_elements(noise_level) eq 0.0 then noise_level = 5.0
 
   sz_npix = size(array)
   nx = sz_npix[1] & ny = sz_npix[2] & nt = sz_npix[3]
-  
-  new_array = array > 0.
+  ;nx = sz_npix[1] & ny = sz_npix[3] & nt = sz_npix[2]
+
+;  arr = array/max(array)
+
+  new_array = array
 
   case sz_npix[0] of
 ;    2: begin
@@ -238,26 +246,27 @@ function add_feature, array, max_intensity=max_intensity, noise_level=noise_leve
         noise_arr = level*randomn(seed, nx, ny)
       
         for t=0, nt-1 do new_array[*,*,t] = reform(new_array[*,*,t]) + noise_arr
-      
+      ;        for t=0, nt-1 do new_array[*,t,*] = reform(array[*,t,*]) + noise_arr
+
+      ;stop
         print, "random noise added"
       endif
       ; ---------------------------------------------------------------------------------------------
 
-      G_new = new_array[*,*,302:nt-1]
-      sz_npix = size(G_new)
-      nx = sz_npix[1] & ny = sz_npix[2] & nt = sz_npix[3]
-      
+      G_new = new_array/max(new_array)
+
       ; ------------------------------ Mimicing Brightness Behavior: --------------------------------
       ; adds brightness behaviour:
       if keyword_Set(max_intensity) ne 0 then begin
         R_initial = 4.0 & pix_size  = 0.014 & y0 = R_initial/pix_size
         intensity = (( (y0 + findgen(ny))/(ny+y0) ) )^(-3)
         
-        for t=0, nt-1 do for x=0, nx-1 do G_new[x,*,t] = smooth(reform(G_new[x,*,t])*intensity*max_intensity, 10)
-;        for x=0, nx-1 do begin
-;          for t=0, nt-1 do G_new[x,t,*] = smooth( reform( new_array[x,*,t] ) * intensity * max_intensity, 10 )
-;        endfor
-;        
+        for t=0, nt-1 do begin
+          for x=0, nx-1 do G_new[x,*,t] = smooth(reform(new_array[x,*,t])*intensity, 10)
+          G_new[*,*,t]=reform(G_new[*,*,t])*max_intensity
+        endfor
+;        for t=0, nt-1 do for x=0, nx-1 do G_new[x,t,*] = smooth(reform(new_array[x,t,*])*intensity*max_intensity, 10)
+
         print, "brightness behavior added"
       endif     
 
@@ -265,6 +274,13 @@ function add_feature, array, max_intensity=max_intensity, noise_level=noise_leve
   endcase
 ;  print, "run time", 
 
+  g = G_new[*,*,300:nt-1] & data = fltarr(nx,nt-300,ny) 
+  for i=0, nt-300-1 do begin
+    img=reform(g[*,*,i]) 
+    data[*,i,*] = img
+  endfor
   
-  return, G_new
-end
+  print, "run time", systime(/s)-t0
+  
+  return, data
+  end
