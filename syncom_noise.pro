@@ -1,13 +1,14 @@
-PRO SYNCOM_noise, ModPramsStruct, img, new_img
+PRO SYNCOM_noise, ModPramsStruct, img, new_img, rect_img, rectangular=rectangular, noise_add=noise_add, luminosity_add=luminosity_add 
   ;+
   ; Name:
   ;      SYNCOM_noise
   ;
   ; Purpose:
   ;      Adds random noise and mimics brightness behavior to the input image based on model parameters.
+  ;      Optionally, converts the image into rectangular coordinates.
   ;
   ; Calling Sequence:
-  ;      SYNCOM_noise, ModPramsStruct, img, new_img
+  ;      SYNCOM_noise, ModPramsStruct, img, new_img, rect_img, rectangular=rectangular, noise_add=noise_add, luminosity_add=luminosity_add
   ;
   ; Inputs:
   ;      ModPramsStruct - Structure containing model parameters, including:
@@ -19,8 +20,14 @@ PRO SYNCOM_noise, ModPramsStruct, img, new_img
   ;
   ;      img              - Input image array.
   ;
+  ; Keywords:
+  ;      noise_add      - If set, adds random noise to the image.
+  ;      luminosity_add - If set, modifies the image to mimic brightness behavior.
+  ;      rectangular    - If set, converts the image into rectangular coordinates.
+  ;
   ; Outputs:
   ;      new_img - Output image array with added noise and brightness behavior.
+  ;      rect_img - Output rectangular image array (if the rectangular keyword is set).
   ;
   ; Author:
   ;      Written by Valmir Moraes, Jun 2023
@@ -68,6 +75,17 @@ PRO SYNCOM_noise, ModPramsStruct, img, new_img
 
     print, "brightness behavior added"
   endif    
+  ; ---------------------------------------------------------------------------------------------
+  
+  ; ----------------------- Converts Image into Rectangular coordinates: ------------------------
+  ; Converts the polar image to rectangular coordinates if the rectangular keyword is set
+  if keyword_set(rectangular) then begin
+
+    ; Convert the image using the polar_to_rect_tr function
+    rect_img = polar_to_rect_tr(new_img, [0,359.9], [5.0, 14.226], n=1024)
+
+    print, "rectangular image created"
+  endif
   ; ---------------------------------------------------------------------------------------------
 
   ; Print the total runtime of the procedure
