@@ -1,4 +1,4 @@
-PRO SYNCOM, ModPramsStruct,LoadStruc,syncom_data, syncom_version, time_t, time0
+PRO SYNCOM, ModPramsStruct,LoadStruc,syncom_data, syncom_version, time_t, time0,scale_factor
   t0=systime(/s)
 
   ;+
@@ -69,7 +69,7 @@ PRO SYNCOM, ModPramsStruct,LoadStruc,syncom_data, syncom_version, time_t, time0
   ;  period_array = (848./ (period_array/300.) )  ; units in seconds
   v_array      = outarray[*,5]                 ; units in km/seconds
   v_array      = (v_array * 300./9744.)        ; units in pixels/frame
-  L_array      = (outarray[*,6])/0.1                 ; units in degrees
+  L_array      = scale_factor*(outarray[*,6])/0.1                ; units in degrees
   ;  L_array      = L_array[(sort(( L_array )))]/0.1           ; units in degrees
 
   ;  L_array      = (randomn(seed,n_blobs)*0.+0.5)/0.1 ; units in degrees
