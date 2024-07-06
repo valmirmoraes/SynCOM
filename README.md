@@ -18,7 +18,7 @@ SYNCOM_N_BLOBS (optional): Specifies the minimum number of blobs in the image. D
 ### 2. SYNCOM_LOAD
 The SYNCOM_LOAD procedure constructs arrays based on ModPramsStruct to initialize and accelerate the image processing.
 
-Usage:
+**Usage:**
 SYNCOM_LOAD, ModPramsStruct, LoadStruc
 
 Parameters:
@@ -29,7 +29,7 @@ LoadStruc: A structure used to store arrays that facilitate faster image process
 ### 3. SYNCOM
 The SYNCOM procedure generates synthetic image sets using the parameters and structures defined previously.
 
-Usage:
+**Usage:**
 SYNCOM, ModPramsStruct, LoadStruc, syncom_data, "test_simple", 100., 0., 2.
 
 Parameters:
