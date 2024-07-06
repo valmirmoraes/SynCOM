@@ -54,16 +54,19 @@ syncom_data: The output array that will hold the synthetic image sets.
 
 2.: A scale factor for enlarging blobs and smoothing the background. The standard value is 1.
 
-**Example:**
+**Example Workflow:**
 Here's a complete example of how to use these procedures together:
+
+#### 1. Initialize parameters
 ```idl
-; Initialize parameters
 syncomprams, ModPramsStruct, SYNCOM_N_BLOBS=5000
-
-; Load structures for faster processing
+```
+#### 2. Load structures for faster processing
+```idl
 SYNCOM_LOAD, ModPramsStruct, LoadStruc
-
-; Generate synthetic images
+```
+#### 3. Generate synthetic images
+```idl
 SYNCOM, ModPramsStruct, LoadStruc, syncom_data, "test_simple", 100., 0., 2.
 ```
 This sequence will generate a set of synthetic images with the specified parameters and save them with the prefix "test_simple".
