@@ -24,7 +24,7 @@
 ;
 ;    Optional Inputs:
 ;        file_name    --- String specifying the file path for the blob data. 
-;                        If not provided, defaults to '/Users/vpereir1/Desktop/SynCOM_project/stereo_data.sav'.
+;                        DEFAULT: '/Users/vpereir1/IDLWorkspace/Default/stereo_analysis.sav'
 ;
 ;    Keywords:
 ;        SIMPLE       --- Optional keyword. If set, a sinusoidal velocity profile is used, overriding 
