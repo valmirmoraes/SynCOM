@@ -1,130 +1,121 @@
-PRO SYNCOMPRAMS,$
+;+
+;    Name:
+;        SYNCOM_PRAMS
+;
+;    Purpose:
+;        To create a structure that defines the parameters and settings for the SYNCOM model.
+;        The structure is used by driver routines to simulate solar wind blobs and generate synthetic images.
+;        The structure is stored in `ModPramsStruct` and contains essential physical properties, model
+;        configuration, and simulation settings.
+;
+;    Calling Sequence:
+;        SYNCOM_PRAMS, ModPramsStruct, SYNCOM_N_BLOBS=1000
+;
+;    Example:
+;        ; Create a parameter structure with 1000 blobs and default settings:
+;        SYNCOM_PRAMS, ModPramsStruct, SYNCOM_N_BLOBS=1000
+;
+;        ; Save parameters to a file:
+;        SYNCOM_PRAMS, ModPramsStruct, SYNCOM_N_BLOBS=1000, SAVEPRAMS='params.sav'
+;
+;    Inputs:
+;        SYNCOM_N_BLOBS       ---   Number of blobs to simulate (free parameter).
+;                                   DEFAULT: 1000
+;
+;    Optional Inputs:
+;        SYNCOM_CADENCE       ---   Time interval between successive frames (in seconds).
+;                                   DEFAULT: 300.0
+;
+;        SYNCOM_PIXEL         ---   Spatial resolution per pixel (in units of solar radii).
+;                                   DEFAULT: 0.014
+;
+;        SYNCOM_NX            ---   Resolution of the simulated image in the angular direction.
+;                                   Position angle range: 0 to 360 degrees.
+;                                   UNITS: Pixels
+;                                   DEFAULT: 3600
+;
+;        SYNCOM_NY            ---   Resolution of the simulated image in the radial direction.
+;                                   Radial distance range: 5 to 14.226 solar radii.
+;                                   UNITS: Pixels
+;                                   DEFAULT: 659
+;
+;        SYNCOM_SIZE          ---   Controls the size of the blobs in the simulation.
+;                                   Blob sizes range from 0.1 to 1.0 R_sun.
+;                                   DEFAULT: 1.0
+;
+;        SYNCOM_ACC           ---   Enables or disables blob acceleration.
+;                                   1: ON, 0: OFF
+;                                   DEFAULT: 0 (OFF)
+;
+;        SYNCOM_INITIAL_R_SUN ---   Initial radial position where blobs emerge (in solar radii).
+;                                   DEFAULT: 1.0 R_sun
+;
+;        SYNCOM_NOISE_LEVEL   ---   Background noise level to be added to the simulation.
+;                                   DEFAULT: 0.0 (No noise)
+;
+;        SYNCOM_MAX_INTENSITY  ---  Maximum allowed intensity for blobs.
+;                                   DEFAULT: 1.0E-10
+;
+;        SYNCOMFILE           ---   Name of the file containing statistical data for the model.
+;                                   DEFAULT: $FORWARD_DB/syncom_20140414_densfix.sav
+;
+;        DATE                 ---   Specifies the date to retrieve the datacube from $FORWARD_DB/SYNCOM.
+;                                   Overridden if SYNCOMFILE is set.
+;
+;    Optional Keywords:
+;        SAVEPRAMS            ---   If set, saves the model parameters to a specified file.
+;                                   Can also be set to 1 to overwrite the parameter array.
+;
+;        READPRAMS            ---   Reads parameters from a file or structure and overwrites
+;                                   existing parameters.
+;
+;    Outputs:
+;        ModPramsStruct       ---   Structure containing the SYNCOM model parameters, including:
+;                                   - NAME: 'SynCOM'
+;                                   - LABEL: 'SynCOM'
+;                                   - T0: Initial time in the simulation
+;
+;    Description of Procedure:
+;        1. The procedure generates a structure (ModPramsStruct) with the model parameters
+;           necessary for the SYNCOM simulation. This structure includes cadence, pixel size,
+;           blob count, size scaling, and other physical properties.
+;        2. The procedure reads parameters from a file (if provided), or directly from input arguments.
+;           Overwritten parameters are handled accordingly.
+;        3. ModPramsStruct is then used by other SYNCOM procedures to generate synthetic
+;           solar wind simulations.
+;
+;    Notes:
+;        - ModPramsStruct contains all the necessary parameters to define the simulation setup.
+;        - This procedure does not perform the simulation itself but creates the input structure
+;          required for other SYNCOM routines to carry out the simulation.
+;
+;    Called by:
+;        SYNCOM
+;
+;    Calls:
+;        NONE
+;
+;    Common Blocks:
+;        None
+;
+;    Author and History:
+;        Written by Valmir Moraes, Jun 2023
+;        Revised for clarity by Valmir Moraes, Sep 2024
+;-
+
+PRO SYNCOM_PRAMS,$
   ;************* don't delete next line
   outarray,syncomfile=syncomfile, $
   date=date,working_dir=working_dir,$
-  ;************* keep the next two if you want temperature and/or field-aligned flow
-  hydro=hydro0,$
-  cdensprof=cdensprof,ct0=ct0,$
-  odensprof=odensprof,ot0=ot0,$
   ;*************add your own model parameters, e.g. time=time0
-  SYNCOM_CADENCE=SYNCOM_CADENCE0, SYNCOM_NT=SYNCOM_NT0,$
-  SYNCOM_ACC=SYNCOM_ACC0, SYNCOM_N_BLOBS=SYNCOM_N_BLOBS0, SYNCOM_TIME=SYNCOM_TIME0,$
-  SYNCOM_DENS_SCALE=SYNCOM_DENS_SCALE0, SYNCOM_INITIAL_R_SUN=SYNCOM_INITIAL_R_SUN0,SYNCOM_SIZE=SYNCOM_SIZE0, $
-  VERBOSE=VERBOSE0, syncom_noise_level=syncom_noise_level0, syncom_max_intensity=syncom_max_intensity0, $
+  SYNCOM_N_BLOBS=SYNCOM_N_BLOBS0, $
+  SYNCOM_CADENCE=SYNCOM_CADENCE0,SYNCOM_PIXEL=SYNCOM_PIXEL0,$
+  SYNCOM_NX=SYNCOM_NX0,SYNCOM_NY=SYNCOM_NY0,$
+  SYNCOM_ACC=SYNCOM_ACC0,SYNCOM_SIZE=SYNCOM_SIZE0,SYNCOM_INITIAL_R_SUN=SYNCOM_INITIAL_R_SUN0, $
+  SYNCOM_NOISE_LEVEL=SYNCOM_NOISE_LEVEL0,SYNCOM_MAX_INTENSITY=SYNCOM_MAX_INTENSITY0, $
   ;*************don't delete below
   saveprams=saveprams,readprams=readprams
-  ;+
-  ;
-  ;Name: SYNCOMPRAMS
-  ;
-  ;Purpose: To create structure containing information about SYNCOM
-  ; To be called by driver routine and resulting structure will be named
-  ;
-  ; ModPramsStruct (with ModPramsStruct.name='syncom')
-  ;
-  ;
-  ; Called by FOR_MODELDEFAULTS
-  ;
-  ;Keyword Inputs:
-  ;
-  ; PHYSICAL PROPERTIES
-  ;
-  ;  SYNCOM_CADENCE - Time cadence: Provided by the instrument
-  ; used to scale the temporal statistics appropriately depending
-  ;                      on what instrument was used to create them
-  ;                        UNITS SECONDS/FRAMES
-  ;                        DEFAULT 300.d0
-  ;                              ***not being used***
-  ;
-  ;  SYNCOM_N_BLOBS      - Number of Blobs (free parameter)
-  ;                        DEFAULT 1000.0
-  ;
-  ;  SYNCOM_ACC          - Turns acceleration (1) ON
-  ;                        DEFAULT 0.d0 : OFF
-  ;       ***placeholder***
-  ;
-  ;  SYNCOM_TIME         - Model Time T -- affects blob location
-  ;                        UNITS SECONDS
-  ;                        DEFAULT 0.d0
-  ;
-  ;  SYNCOM_INITIAL_R_SUN - Initial radial position
-  ;       position where blobs first emerge
-  ;                      set to 1 Rsun for FORWARD (free parameter)
-  ;                        UNITS R_SUN
-  ;                        DEFAULT 1.d0
-  ;  SYNCOM_SIZE -- blob spatial scaling (free parameter)
-  ;       if set to 1, the edge of each blob
-  ;         just touches the edge of the next blob
-  ;
-  ;  SYNCOM_DENS_SCALE   - Density scale fator
-  ;         scaling factor for density
-  ;                               needed because initial analysis done in intensity
-  ;                        DEFAULT 1E8
-  ;
-  ;
-  ;   SYNCOMFILE: filename (including extension) of the save file of
-  ;       file containig statistical data found in $FORWARD_DB/SYNCOM directory
-  ;       Default will be set to $FORWARD_DB/syncom_20140414_densfix.sav
-  ;
-  ;     NOTE ---  SYNCOMFILE OVERWRITES DATE IF SET AND DIFFERENT
-  ;               BE CAREFUL FOR EXAMPLE IF YOU WANT CMER AND BANGLE TO BE FOR
-  ;               A SOMEWHAT DIFFERENT DATE THAN THE ONE IN THE CUBE - in this
-  ;               case, you should explicitly define CMER, and BANG as keywords
-  ;               In other words -- if you use keyword SYNCOMFILE, DATE will
-  ;               be completely ignored and actually replaced by date from name of SYNCOMFILE.
-  ;               Note widget should not send SYNCOMFILE explicitly, that is,
-  ;               for most calls it will send DATE but not SYNCOMFILE;
-  ;               unless SYNCOMFILE as a file is selected via the widget
-  ;               or if READPRAMS is set it will use that SYNCOMFILE
-  ;               (if there is one; generally, it will not be saved in READPRAMS
-  ;               unless it is an original keyword)
-  ;
-  ;  DATE ---     if this is set,  it will look for datacube
-  ;               for this date (or close to it) in $FORWARD_DB/SYNCOM
-  ;               If SYNCOMFILE set, it will overrule and overwrite DATE.
-  ;
-  ; HYDRO, CDENSPROF, ODENSPROF, CT0, OT0:
-  ;               how to handle the plasma throughout the corona.
-  ;               DEFAULT HYDRO 3
-  ;               Vasquez 2003
-  ;
-  ;       FOR CDENSPROF, ODENSPROF, CTO, OT0 DEFAULTS SEE NUMCUBE/FOR_HYDRODEFAULTS
 
-  ;
-  ; BOOKKEEPING
-  ;
-  ;
-  ;
-  ; SAVEPRAMS - if keyword set to a string, write parameters to filename
-  ;                       (which is the keyword value saveprams)
-  ;                       or if set to 1, then replace with pramarray
-  ;
-  ;
-  ; READPRAMS - if keyword set, read in parameters from filename
-  ;                       (which is the keyword value filename)
-  ;                       or if a structure than read directly
-  ;                       NOTE, flagged keywords will overwritten
-  ;
-  ; ModPramsStruct Outputs:
-  ;
-  ;               As above, plus
-  ;
-  ;               NAME --- SynCOM -- so that procedure can be called in intensint
-  ;               LABEL -- SynCOM -- for plot label
-  ;               MAGMOD -- 0 -- meaning it is NOT a magnetized model
-  ;     (change to 1 if you have magnetic field
-  ;
-  ;               T0
-  ;
-  ;
-  ;Output:outarray - structure containing keyword output model parameters
-  ;
-  ;Common Blocks: None
-  ;
-  ; Author and history:
-  ;
-  ;   Written by Valmir Moraes   Jun 2023
-  ;-
 
   slash=path_sep()
 
@@ -147,16 +138,9 @@ PRO SYNCOMPRAMS,$
     for i=0,n_elements(t)-1 do void=execute(t[i]+'_rd=inarray.(i)')
   endif
 
-  ; Parameters
-  ; If keyword set for a given parameter, then this is used.
-  ; If keyword not specified, then use value from readparams if set. If readparams not set,
-  ; uses the default values as listed in these following statements
-
-  ; if you want field-aligned velocity keep this parameter-- at the moment default value is zero, no flow
-  ; velimpose=n_elements(velimpose0) eq 0?(n_elements(velimpose_rd) eq 0?0.0:velimpose_rd):velimpose0
-
-  ; if you want temperature keep this next
+  ; if you want temperature keep this next 
   syncom_cadence=n_elements(syncom_cadence0) eq 0?(n_elements(syncom_cadence_rd) eq 0?300.0:syncom_cadence_rd):syncom_cadence0
+  syncom_pixel=n_elements(syncom_pixel0) eq 0?(n_elements(syncom_pixel_rd) eq 0?0.014:syncom_pixel_rd):syncom_pixel0
   syncom_n_blobs=n_elements(syncom_n_blobs0) eq 0?(n_elements(syncom_n_blobs_rd) eq 0?1000.0:syncom_n_blobs_rd):syncom_n_blobs0
   syncom_acc=n_elements(syncom_acc0) eq 0?(n_elements(syncom_acc_rd) eq 0?0.0:syncom_acc_rd):syncom_acc0
   syncom_initial_R_sun=n_elements(syncom_initial_R_sun0) eq 0?(n_elements(syncom_initial_R_sun_rd) eq 0?5.0:syncom_initial_R_sun_rd):syncom_initial_R_sun0
@@ -169,34 +153,6 @@ PRO SYNCOMPRAMS,$
   syncom_ny=n_elements(syncom_ny0) eq 0?(n_elements(syncom_ny_rd) eq 0?659.0:syncom_ny_rd):syncom_ny0
   syncom_noise_level=n_elements(syncom_noise_level0) eq 0?(n_elements(syncom_noise_level_rd) eq 0?0.0:syncom_noise_level_rd):syncom_noise_level0
   syncom_max_intensity=n_elements(syncom_max_intensity0) eq 0?(n_elements(syncom_max_intensity_rd) eq 0?1.0E-14:syncom_max_intensity_rd):syncom_max_intensity0
-
-
-  ; Plasma parameters
-  hydro=n_elements(hydro0) eq 0?(n_elements(hydro_rd) eq 0?0:hydro_rd):hydro0
-
-  if exist(cdensprof) then cdensprofsave=cdensprof
-  if exist(ct0) then ct0save=ct0
-  for_hydrodefaults,$
-    hydro=hydro,cdensprof=cdensprof,ct0=ct0,$
-    odensprof=odensprof,oT0=oT0,$
-    rcdensprof=cdensprof_rd,rct0=cT0_rd,$
-    rodensprof=odensprof_rd,rot0=oT0_rd,$
-    vodensprof=vodensprof,$
-    vcdensprof=vcdensprof
-  ;
-  ; note the HYDRO = 4 requires rerunning for_hydrodefaults
-  ;  with HYDRO=3 for the closed field regions
-
-  hydrosave=hydro
-  if hydro eq 4 then begin
-    for_hydrodefaults,$
-      hydro=3,cdensprof=cdensprofsave,ct0=ct0save,$
-      rcdensprof=cdensprof_rd,rct0=cT0_rd,$
-      vcdensprof=vcdensprof
-    cdensprof=cdensprofsave
-    ct0=ct0save
-  endif
-  hydro=hydrosave
 
   ;
   ; need to be careful with SYNCOMFILE and DATE
@@ -291,7 +247,6 @@ PRO SYNCOMPRAMS,$
 
   label='SynCOM model, cube='+now+exlab
   name='syncom'
-  magmod=0
 
   ;
   ; set up  pram input array
@@ -300,23 +255,21 @@ PRO SYNCOMPRAMS,$
 
   pramarray={Name:name,$
     syncomfile:syncomfilesave,$
-    hydro:double(hydro),cdensprof:cdensprof,ct0:ct0,$
-    ;          odensprof:odensprof,ot0:ot0,$
-    syncom_cadence:syncom_cadence, $
+    syncom_cadence:syncom_cadence,syncom_pixel:syncom_pixel, $
     syncom_n_blobs:syncom_n_blobs, $
     syncom_acc:syncom_acc, $
     syncom_time:syncom_time, $
     syncom_initial_R_sun:syncom_initial_R_sun, $
-    verbose:verbose, $
     syncom_size:syncom_size, $
-    syncom_nt:syncom_nt,syncom_nx:syncom_nx,syncom_ny:syncom_ny, $
+    syncom_nx:syncom_nx,syncom_ny:syncom_ny, $
     syncom_noise_level:syncom_noise_level, $
-    syncom_max_intensity:syncom_max_intensity, $
-    syncom_dens_scale:syncom_dens_scale $
+    syncom_max_intensity:syncom_max_intensity $
   }
-
+  
+  ;
   ; if requested, save input parameters to a file (stored in file named saveprams if it is a string)
-
+  ;
+  
   if keyword_set(saveprams) then begin
     savefilename=saveprams
     if n_elements(working_dir) eq 1 and datatype(saveprams) eq 'STR' then begin
@@ -328,29 +281,21 @@ PRO SYNCOMPRAMS,$
       else: saveprams=pramarray
     endcase
   endif
+  
+  file_name = '/Users/vpereir1/IDLWorkspace/Default/stereo_analysis.sav'
 
 
   outarray={Name:name,$
     Label:label,$
-    magmod:magmod,$
-    filename:syncomfile,$
-    syncom_cadence:syncom_cadence, $
+    filename:file_name,$
+    syncom_cadence:syncom_cadence,syncom_pixel:syncom_pixel, $
     syncom_n_blobs:syncom_n_blobs, $
     syncom_acc:syncom_acc, $
     syncom_time:syncom_time, $
-    syncom_nt:syncom_nt,syncom_nx:syncom_nx,syncom_ny:syncom_ny, $
+    syncom_nx:syncom_nx,syncom_ny:syncom_ny, $
     syncom_initial_R_sun:syncom_initial_R_sun, $
-    syncom_dens_scale:syncom_dens_scale, $
-    Hydro:double(Hydro), $
-    CDensProf:VCDensProf, $
-    verbose:verbose, $
     syncom_size:syncom_size, $
     syncom_noise_level:syncom_noise_level, $
-    syncom_max_intensity:syncom_max_intensity, $
-    ;            ODensProf:VODensProf,$
-    ;            OT0:OT0,
-    CT0:CT0}
-
-  date=dateuse
+    syncom_max_intensity:syncom_max_intensity}
 
 END
